@@ -20,43 +20,42 @@ const Inventory = () => {
   }, []);
 
   // Excel Import Logic using CDN Library
-  const handleExcelImport = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+ const handleUniversalImport = (e) => {
+  const file = e.target.files[0];
+  const reader = new FileReader();
 
-    setIsImporting(true);
-    const reader = new FileReader();
+  reader.onload = async (evt) => {
+    const bstr = evt.target.result;
+    const wb = window.XLSX.read(bstr, { type: 'binary' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = window.XLSX.utils.sheet_to_json(ws);
 
-    reader.onload = async (evt) => {
-      try {
-        const bstr = evt.target.result;
-        const wb = window.XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const json = window.XLSX.utils.sheet_to_json(ws);
+    if (json.length === 0) return alert("File is empty!");
 
-        // Map Bajaj Excel columns to our Database columns
-        const formattedData = json.map(row => ({
-          name: row.description || row.component || "Unknown Part",
-          part_number: row.spare_part_code || "N/A",
-          current_stock: parseInt(row.count) || 0,
-          min_required: parseInt(row.monthly_required) || 1000, // Monthly goal
-        }));
+    // SMART MAPPING: Look for common keywords in headers
+    const headers = Object.keys(json[0]);
+    
+    const findColumn = (keywords) => 
+      headers.find(h => keywords.some(k => h.toLowerCase().includes(k)));
 
-        const { error } = await supabase.from('inventory').insert(formattedData);
+    const mappedData = json.map(row => ({
+      // If it finds "Part", "Name", or "Component", it uses that column
+      name: row[findColumn(['name', 'component', 'description'])] || "Unknown Item",
+      part_number: row[findColumn(['code', 'part', 'id', 'sku'])] || "N/A",
+      current_stock: parseInt(row[findColumn(['stock', 'count', 'qty', 'quantity'])]) || 0,
+      min_required: parseInt(row[findColumn(['min', 'required', 'limit'])]) || 100,
+    }));
 
-        if (error) throw error;
-        
-        alert("🏆 Bajaj Inventory Synced Successfully!");
-        fetchInventory(); // Refresh the list
-      } catch (err) {
-        alert("Import Error: " + err.message);
-      } finally {
-        setIsImporting(false);
-      }
-    };
-    reader.readAsBinaryString(file);
+    const { error } = await supabase.from('inventory').insert(mappedData);
+
+    if (error) alert("Sync Error: " + error.message);
+    else {
+      alert(`🏆 Successfully imported ${mappedData.length} items using Smart Mapping!`);
+      window.location.reload();
+    }
   };
+  reader.readAsBinaryString(file);
+};
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name?.toLowerCase().includes(search.toLowerCase());
