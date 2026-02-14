@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'; // ADDED: Professional module import
+import * as XLSX from 'xlsx'; 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import InventoryCard from '../components/InventoryCard';
@@ -19,7 +19,6 @@ const Inventory = () => {
     fetchInventory();
   }, []);
 
-  // UNIVERSAL SMART IMPORT LOGIC
   const handleUniversalImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -31,7 +30,7 @@ const Inventory = () => {
       try {
         const bstr = evt.target.result;
         
-        // CHANGED: Removed "window." prefix to use the imported XLSX module
+        // Use the imported XLSX directly
         const wb = XLSX.read(bstr, { type: 'binary' }); 
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws);
@@ -39,8 +38,6 @@ const Inventory = () => {
         if (json.length === 0) throw new Error("File is empty!");
 
         const headers = Object.keys(json[0]);
-        
-        // Smart Column Finder
         const findColumn = (keywords) => 
           headers.find(h => keywords.some(k => h.toLowerCase().includes(k)));
 
@@ -52,7 +49,6 @@ const Inventory = () => {
         }));
 
         const { error } = await supabase.from('inventory').insert(mappedData);
-
         if (error) throw error;
         
         alert(`🏆 Smart Mapper Active: Processed ${mappedData.length} items.`);
@@ -74,12 +70,10 @@ const Inventory = () => {
 
   return (
     <div className="relative space-y-8 animate-in fade-in duration-700">
-      {/* Background Glows */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
         <div className="absolute top-[20%] right-[-5%] w-[30%] h-[30%] bg-emerald-500/5 rounded-full blur-[120px]"></div>
       </div>
 
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
@@ -107,7 +101,6 @@ const Inventory = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="relative group">
         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-sky-500 transition-colors" size={20} />
         <input 
@@ -118,7 +111,6 @@ const Inventory = () => {
         />
       </div>
 
-      {/* Grid of Cards */}
       {filteredItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pb-20">
           {filteredItems.map(item => (
