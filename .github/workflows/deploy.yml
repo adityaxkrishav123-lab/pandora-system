@@ -11,16 +11,14 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v3
 
-      - name: Install Dependencies 🔧
-        run: npm install
-
-      - name: Build 🏗️
+      - name: Install and Build 🔧
         run: |
+          npm install --legacy-peer-deps
           CI=false npm run build
-        # CI=false prevents the build from failing due to small warnings.
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: build # Create React App always uses 'build'
+          folder: build
           branch: gh-pages
+          clean: true
