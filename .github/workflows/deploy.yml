@@ -2,7 +2,7 @@ name: Build and Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main] # Runs every time you commit to main
+    branches: [main]
 
 jobs:
   build-and-deploy:
@@ -16,10 +16,10 @@ jobs:
           npm install
           npm run build
         env:
-          CI: false # Prevents warnings from stopping the build
+          CI: false
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: build # The folder React creates during build
-          branch: gh-pages # The special branch for your live site
+          folder: build
+          branch: gh-pages
