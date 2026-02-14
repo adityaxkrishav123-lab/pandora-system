@@ -15,7 +15,7 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-slate-900 min-h-screen p-6 text-white flex flex-col">
+    <div className="w-64 bg-[#020814] border-r border-white/5 min-h-screen p-6 text-white flex flex-col">
       <div className="flex items-center gap-3 mb-10 px-2">
         <div className="bg-sky-500 p-2 rounded-lg"><Zap size={20} fill="white"/></div>
         <h1 className="text-xl font-bold tracking-tight text-white uppercase">PANDORA</h1>
