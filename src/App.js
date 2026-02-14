@@ -17,16 +17,16 @@ const App = () => {
             <span className="font-bold text-xl tracking-tight">PANDORA</span>
           </div>
           <nav className="space-y-2">
-            <Link to="/" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all font-medium text-slate-600 hover:text-blue-600">
+            <Link to="/" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all font-medium text-slate-600 hover:text-blue-600 font-bold">
               <LayoutDashboard size={20} /> Dashboard
             </Link>
-            <Link to="/inventory" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all font-medium text-slate-600 hover:text-blue-600">
+            <Link to="/inventory" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all font-medium text-slate-600 hover:text-blue-600 font-bold">
               <Box size={20} /> Inventory
             </Link>
-            <Link to="/analytics" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all font-medium text-slate-600 hover:text-blue-600">
+            <Link to="/analytics" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all font-medium text-slate-600 hover:text-blue-600 font-bold">
               <BarChart3 size={20} /> Analytics
             </Link>
-            <Link to="/detail" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all font-medium text-slate-600 hover:text-blue-600">
+            <Link to="/detail" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all font-medium text-slate-600 hover:text-blue-600 font-bold">
               <Cpu size={20} /> AI Insights
             </Link>
           </nav>
