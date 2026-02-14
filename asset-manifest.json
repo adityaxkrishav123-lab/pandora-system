@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/pandora-system/static/js/main.d8427dcf.js",
+    "main.js": "/pandora-system/static/js/main.c77c1e44.js",
     "index.html": "/pandora-system/index.html",
-    "main.d8427dcf.js.map": "/pandora-system/static/js/main.d8427dcf.js.map"
+    "main.c77c1e44.js.map": "/pandora-system/static/js/main.c77c1e44.js.map"
   },
   "entrypoints": [
-    "static/js/main.d8427dcf.js"
+    "static/js/main.c77c1e44.js"
   ]
 }
