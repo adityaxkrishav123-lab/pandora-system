@@ -4,6 +4,8 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Analytics from './pages/Analytics';
+import RecipeManager from './pages/RecipeManager'; // Added
+import ProductionEntry from './pages/ProductionEntry'; // Added
 
 function App() {
   return (
@@ -14,6 +16,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/inventory" element={<Inventory />} />
+            <Route path="/recipes" element={<RecipeManager />} /> {/* New Route */}
+            <Route path="/production" element={<ProductionEntry />} /> {/* New Route */}
             <Route path="/analytics" element={<Analytics />} />
           </Routes>
         </main>
