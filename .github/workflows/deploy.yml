@@ -17,7 +17,7 @@ jobs:
       - name: Install and Build 🔧
         run: |
           npm install
-          CI=false npm run build
+          npm run build
         env:
           CI: false
 
@@ -26,3 +26,4 @@ jobs:
         with:
           folder: build
           branch: gh-pages
+ 
