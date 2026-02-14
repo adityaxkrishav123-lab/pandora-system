@@ -43,7 +43,7 @@ function App() {
         </Routes>
       ) : (
         /* If logged in, show the Full App */
-        <div className="flex min-h-screen bg-[#F8FAFC]">
+     <div className="flex min-h-screen bg-[#01060f] text-slate-200">
           <Sidebar />
           <main className="flex-1 p-8 overflow-y-auto">
             <Routes>
