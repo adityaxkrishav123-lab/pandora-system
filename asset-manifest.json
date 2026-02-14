@@ -1,0 +1,10 @@
+{
+  "files": {
+    "main.js": "/pandora-system/static/js/main.b3bbee09.js",
+    "index.html": "/pandora-system/index.html",
+    "main.b3bbee09.js.map": "/pandora-system/static/js/main.b3bbee09.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.b3bbee09.js"
+  ]
+}
