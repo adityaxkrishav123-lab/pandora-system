@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx'; // ADDED: Professional module import
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import InventoryCard from '../components/InventoryCard';
@@ -29,9 +30,11 @@ const Inventory = () => {
     reader.onload = async (evt) => {
       try {
         const bstr = evt.target.result;
-        const wb = window.XLSX.read(bstr, { type: 'binary' });
+        
+        // CHANGED: Removed "window." prefix to use the imported XLSX module
+        const wb = XLSX.read(bstr, { type: 'binary' }); 
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const json = window.XLSX.utils.sheet_to_json(ws);
+        const json = XLSX.utils.sheet_to_json(ws);
 
         if (json.length === 0) throw new Error("File is empty!");
 
