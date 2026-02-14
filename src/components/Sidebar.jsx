@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Box, BarChart3, Zap, Cpu, Activity } from 'lucide-react';
+import { LayoutDashboard, Box, BarChart3, Zap, Cpu, Activity, Clock } from 'lucide-react'; // Added Clock
 
 const Sidebar = () => {
   const location = useLocation();
@@ -8,8 +8,9 @@ const Sidebar = () => {
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20}/>, path: '/' },
     { name: 'Inventory', icon: <Box size={20}/>, path: '/inventory' },
-    { name: 'PCB Recipes', icon: <Cpu size={20}/>, path: '/recipes' }, // New Link
-    { name: 'Production', icon: <Activity size={20}/>, path: '/production' }, // New Link
+    { name: 'PCB Recipes', icon: <Cpu size={20}/>, path: '/recipes' },
+    { name: 'Production', icon: <Activity size={20}/>, path: '/production' },
+    { name: 'History', icon: <Clock size={20}/>, path: '/history' }, // Added this
     { name: 'Analytics', icon: <BarChart3 size={20}/>, path: '/analytics' },
   ];
 
@@ -36,7 +37,6 @@ const Sidebar = () => {
         ))}
       </nav>
       
-      {/* Visual Indicator of System Health */}
       <div className="mt-auto p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Neural Status</p>
         <div className="flex items-center gap-2">
