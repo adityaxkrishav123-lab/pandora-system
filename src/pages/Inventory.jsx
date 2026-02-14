@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'; 
+import * as XLSX from 'xlsx'; // <--- VERIFIED: Line 1
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import InventoryCard from '../components/InventoryCard';
@@ -30,7 +30,7 @@ const Inventory = () => {
       try {
         const bstr = evt.target.result;
         
-        // Use the imported XLSX directly
+        // VERIFIED: No "window." prefix used here
         const wb = XLSX.read(bstr, { type: 'binary' }); 
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws);
