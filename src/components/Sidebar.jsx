@@ -43,4 +43,41 @@ const Sidebar = () => {
   );
 };
 
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
+
+const Sidebar = () => {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // Check user role from Supabase Auth
+    const checkRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      // Logic: In your DB, you should have a 'profiles' table with a 'role' column
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user?.id)
+        .single();
+        
+      if (profile?.role === 'admin') setIsAdmin(true);
+    };
+    checkRole();
+  }, []);
+
+  return (
+    // ... previous Sidebar code ...
+    <nav className="flex-1 space-y-2">
+      {/* Everyone sees Dashboard */}
+      <Link to="/" className="...">Dashboard</Link>
+      
+      {/* Only Admin sees the component editing/production vault */}
+      {isAdmin && (
+        <Link to="/inventory" className="...">Production Vault</Link>
+      )}
+      
+      <Link to="/analytics" className="...">AI Analytics</Link>
+    </nav>
+  );
+};
 export default Sidebar;
