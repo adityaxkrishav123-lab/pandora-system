@@ -1,19 +1,23 @@
 /**
  * Friday's Neural Bridge
- * Connects React to the FastAPI/Flask AI Backend
+ * Connects React to the FastAPI Master Backend
  */
 export const getFridayForecast = async (inventoryItem) => {
   try {
-    // Note: Change 'localhost' to your deployed backend URL later
-    const response = await fetch('http://localhost:5000/predict', { 
+    // 💡 Render URL or Localhost (Match your backend port)
+    const BACKEND_URL = 'http://localhost:8000'; 
+
+    const response = await fetch(`${BACKEND_URL}/predict`, { 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        consumption: inventoryItem.consumption_rate || 45, // Features from your .pkl
+        item_name: inventoryItem.name,         // Added for Llama-3 context
+        consumption: inventoryItem.consumption_rate || 45, 
         current_stock: inventoryItem.current_stock,
         min_required: inventoryItem.min_required,
+        // The following are processed by Friday for deeper insights
         day: new Date().getDate(),
         month: new Date().getMonth() + 1,
         week: Math.ceil(new Date().getDate() / 7),
@@ -24,7 +28,9 @@ export const getFridayForecast = async (inventoryItem) => {
     if (!response.ok) throw new Error("Neural Link Offline");
 
     const data = await response.json();
-    return data; // Returns { forecasted_demand: X, recommendation: "..." }
+    
+    // Returns: { item, forecast, friday_advice, engine }
+    return data; 
   } catch (error) {
     console.error("Friday AI Error:", error);
     return null;
