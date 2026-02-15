@@ -37,6 +37,27 @@ const Dashboard = () => {
         const part = row['Component'] || row['Item'] || row['Part'];
         const qty = row['Qty'] || row['Quantity'] || 1;
 
+
+        // 🤖 AUTO-BUY ENGINE: Calculates how much to buy to fix shortages
+  const [procurementList, setProcurementList] = useState([]);
+
+  useEffect(() => {
+    const lowStock = inventory.filter(item => item.current_stock < item.threshold);
+    const list = lowStock.map(item => ({
+      name: item.name,
+      shortage: item.threshold - item.current_stock,
+      orderQty: (item.threshold * 2) - item.current_stock, // Restock to double the safety level
+      status: "Awaiting Approval"
+    }));
+    setProcurementList(list);
+  }, [inventory]);
+
+  const approveOrder = (name) => {
+    addLog(`Neural Order Sent: Restocking ${name}...`, "success");
+    speak(`Order for ${name} has been transmitted to the supplier.`);
+    setProcurementList(prev => prev.filter(item => item.name !== name));
+  }; 
+        
         if (part) {
           // 1. Upsert Inventory
           const { data: invItem } = await supabase.from('inventory')
