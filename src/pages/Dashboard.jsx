@@ -7,36 +7,64 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import InventoryCard from '../components/InventoryCard';
-// ADDON: Import the AI service
+
+// ADDON IMPORTS: The AI link and the Production Ghost Engine
 import { getFridayForecast } from '../lib/aiService';
+import { executeAutoProduction } from '../lib/productionEngine';
 
 const Dashboard = () => {
   const [components, setComponents] = useState([]);
   const [criticalItems, setCriticalItems] = useState([]);
-  // ADDON: Syncing states
+  
+  // ADDON STATES: Control the AI sync flow
   const [isSyncing, setIsSyncing] = useState(false);
   const [aiPrediction, setAiPrediction] = useState(null);
 
+  const fetchDashboardData = async () => {
+    const { data } = await supabase.from('inventory').select('*');
+    const allItems = data || [];
+    setComponents(allItems);
+    // 20% Threshold Logic
+    const critical = allItems.filter(item => item.current_stock <= (item.min_required * 0.2));
+    setCriticalItems(critical);
+  };
+
   useEffect(() => {
-    const getData = async () => {
-      const { data } = await supabase.from('inventory').select('*');
-      const allItems = data || [];
-      setComponents(allItems);
-      const critical = allItems.filter(item => item.current_stock <= (item.min_required * 0.2));
-      setCriticalItems(critical);
-    };
-    getData();
+    fetchDashboardData();
   }, []);
 
-  // ADDON: Neural Sync Handler
-  const handleSyncForecast = async () => {
-    setIsSyncing(true);
-    if (components.length > 0) {
-      // Sends first item as sample to the .pkl model
-      const result = await getFridayForecast(components[0]);
-      if (result) setAiPrediction(result.forecasted_demand);
+  // ADDON LOGIC: The Neural Sync & Production Trigger
+  const handleNeuralSync = async () => {
+    if (components.length === 0) return;
+    
+    setIsSyncing(true); // Start the "Neural Processing" animation
+
+    try {
+      // 1. PHASE ONE: Reach out to the Python AI server (.pkl model)
+      const firstItem = components[0]; 
+      const aiData = await getFridayForecast(firstItem);
+
+      if (aiData && aiData.forecasted_demand > 0) {
+        setAiPrediction(aiData.forecasted_demand);
+        
+        // 2. PHASE TWO: Trigger Auto-Production (Deduct components from Supabase)
+        // Using 'BAJAJ-V4' as the demo recipe ID
+        const prodResult = await executeAutoProduction('BAJAJ-V4', 5); 
+        
+        if (prodResult.success) {
+          alert(`🤖 Friday: Neural sync successful. Predicted demand: ${aiData.forecasted_demand}. Production batches authorized.`);
+          
+          // 3. PHASE THREE: Refresh the live data so charts update instantly
+          await fetchDashboardData();
+        }
+      } else {
+        alert("🤖 Friday: Neural Link unstable. Check if your Python Server (forecast_server.py) is running.");
+      }
+    } catch (error) {
+      console.error("Sync Error:", error);
+    } finally {
+      setIsSyncing(false); // Stop the loading state
     }
-    setTimeout(() => setIsSyncing(false), 1500); // Artificial delay for "feel"
   };
 
   const consumptionData = components.slice(0, 6).map(c => ({ 
@@ -51,11 +79,14 @@ const Dashboard = () => {
 
   return (
     <div className="relative min-h-full space-y-10 animate-in fade-in duration-1000 pb-20">
+      
+      {/* 🌌 NEURAL BACKGROUND */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-sky-500/5 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 rounded-full blur-[120px]"></div>
       </div>
 
+      {/* 🚀 STAGE 1: THE AI BRAIN PANEL */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 relative overflow-hidden bg-gradient-to-br from-sky-500/20 to-purple-600/10 border border-sky-500/30 rounded-[3rem] p-10 flex items-center justify-between group">
            <Zap className="absolute -right-10 -bottom-10 text-white/5 rotate-12 group-hover:rotate-45 transition-transform duration-1000" size={300} />
@@ -73,15 +104,16 @@ const Dashboard = () => {
                   : `"Analyzing demand_forecaster.pkl... Pattern suggests a surge in 48h. Predicted window: 12 days."`}
               </p>
            </div>
-           {/* ADDON: Logic applied to Sync Button */}
+           
+           {/* THE UPDATED ACTIVE BUTTON */}
            <button 
-             onClick={handleSyncForecast}
+             onClick={handleNeuralSync} 
              disabled={isSyncing}
              className={`relative z-10 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-2xl ${
-               isSyncing ? 'bg-slate-700 text-slate-400' : 'bg-white text-black hover:bg-sky-500 hover:text-white'
+               isSyncing ? 'bg-slate-700 text-slate-400 cursor-wait' : 'bg-white text-black hover:bg-sky-500 hover:text-white'
              }`}
            >
-              {isSyncing ? 'Syncing...' : 'Sync Model'}
+              {isSyncing ? 'Neural Processing...' : 'Sync Model'}
            </button>
         </div>
 
@@ -97,6 +129,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* 📊 STAGE 2: ANALYTICS VISUALIZERS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
           <div className="flex items-center gap-3 mb-6">
@@ -117,7 +150,7 @@ const Dashboard = () => {
         <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
           <div className="flex items-center gap-3 mb-6">
             <PieIcon className="text-sky-500" size={18} />
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Health Distribution</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Health</h3>
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -132,6 +165,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* 🚨 STAGE 3: CRITICAL RADAR */}
       {criticalItems.length > 0 && (
         <div className="space-y-6">
           <div className="flex items-center gap-4 text-red-500">
@@ -141,15 +175,13 @@ const Dashboard = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {criticalItems.map(item => (
-              <div key={item.id} className="bg-red-500/5 border border-red-500/20 rounded-[2rem] p-8 flex justify-between items-center group hover:bg-red-500/10 transition-all border-l-8 border-l-red-500">
+              <div key={item.id} className="bg-red-500/5 border border-red-500/20 rounded-[2rem] p-8 flex justify-between items-center group border-l-8 border-l-red-500">
                 <div>
-                  <p className="text-white font-black uppercase text-base tracking-tight">{item.name}</p>
-                  <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
-                    <Activity size={12} /> Stock: {item.current_stock} / {item.min_required}
-                  </p>
+                  <p className="text-white font-black uppercase text-base">{item.name}</p>
+                  <p className="text-[10px] text-red-400 font-bold uppercase mt-2">Stock: {item.current_stock} / {item.min_required}</p>
                 </div>
                 <div className="bg-red-500/20 p-3 rounded-xl">
-                  <ArrowUpRight size={24} className="text-red-500 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  <ArrowUpRight size={24} className="text-red-500" />
                 </div>
               </div>
             ))}
@@ -157,6 +189,7 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* 📦 STAGE 4: COMPONENT MATRIX */}
       <div className="space-y-6">
         <div className="flex items-center gap-4 text-slate-500">
           <Cpu size={18} />
