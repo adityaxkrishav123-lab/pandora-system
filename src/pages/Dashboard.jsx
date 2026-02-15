@@ -9,20 +9,17 @@ import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, Tooltip
 import InventoryCard from '../components/InventoryCard';
 
 // 🔌 NEURAL IMPORTS
-import { getFridayForecast } from '../lib/aiService';
+import { getFridayForecast, wakeUpFriday } from '../lib/aiService'; // Added Heartbeat
 import { executeAutoProduction } from '../lib/productionEngine';
 
 const Dashboard = () => {
   const [components, setComponents] = useState([]);
   const [criticalItems, setCriticalItems] = useState([]);
-  
-  // 🧠 AI & ENGINE STATES
   const [isSyncing, setIsSyncing] = useState(false);
   const [aiPrediction, setAiPrediction] = useState(null);
   const [fridayInsight, setFridayInsight] = useState("");
   const [qualityStats, setQualityStats] = useState({ yield: 98.2, co2: -12, grade: 'A+' });
   
-  // 📝 NEURAL LOGS STATE
   const [logs, setLogs] = useState([
     { id: 1, time: new Date().toLocaleTimeString(), msg: "Friday System Online. Neural Link standing by.", type: "system" }
   ]);
@@ -41,9 +38,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    wakeUpFriday(); // ⚡ Keep the Render brain warm on load
   }, []);
 
-  // ⚡ THE MASTER SYNC HANDLER (V3.0 - FINAL)
   const handleNeuralSync = async () => {
     if (components.length === 0) return;
     setIsSyncing(true);
@@ -54,11 +51,11 @@ const Dashboard = () => {
       const aiData = await getFridayForecast(firstItem);
 
       if (aiData) {
+        // Correcting the mapping from your aiService response
         setAiPrediction(aiData.forecasted_demand);
         setFridayInsight(aiData.friday_advice);
-        addLog(`Friday: ${aiData.friday_advice.substring(0, 60)}...`, "ai");
+        addLog(`Friday: ${aiData.friday_advice.substring(0, 50)}...`, "ai");
         
-        // Trigger Ghost Engine (Automatic stock deduction)
         addLog("Ghost Engine: Executing Production Run...", "process");
         const prodResult = await executeAutoProduction('BAJAJ-V4', 5); 
         
@@ -75,8 +72,7 @@ const Dashboard = () => {
         }
       }
     } catch (error) {
-      addLog("Neural Link Interrupted. Check Backend.", "error");
-      console.error("Neural Sync Error:", error);
+      addLog("Neural Link Interrupted. Check Backend Console.", "error");
     } finally {
       setIsSyncing(false);
     }
@@ -93,9 +89,9 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="relative min-h-full space-y-10 animate-in fade-in duration-1000 pb-20">
+    <div className="relative min-h-full space-y-10 animate-in fade-in duration-1000 pb-20 p-6 lg:p-10">
       
-      {/* 🌌 AMBIENT NEURAL BACKGROUND */}
+      {/* 🌌 AMBIENT BACKGROUND */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-sky-500/5 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 rounded-full blur-[120px]"></div>
@@ -151,26 +147,26 @@ const Dashboard = () => {
 
       {/* 📊 STAGE 2: ANALYTICS & VISUALS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
+        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl transition-all hover:border-white/20">
           <div className="flex items-center gap-3 mb-6">
             <BarChart3 className="text-sky-500" size={18} />
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock Distribution</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Stock Distribution</h3>
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={consumptionData}>
                 <XAxis dataKey="name" hide />
-                <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#020617', border: 'none', borderRadius: '16px', fontSize: '10px'}} />
+                <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', fontSize: '10px'}} />
                 <Bar dataKey="value" fill="#0ea5e9" radius={[10, 10, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
+        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl transition-all hover:border-white/20">
           <div className="flex items-center gap-3 mb-6">
             <PieIcon className="text-sky-500" size={18} />
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Health</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Health Radar</h3>
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -178,14 +174,14 @@ const Dashboard = () => {
                 <Pie data={stockStats} innerRadius={70} outerRadius={90} paddingAngle={8} dataKey="value">
                   {stockStats.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                 </Pie>
-                <Tooltip contentStyle={{backgroundColor: '#020617', border: 'none', borderRadius: '16px'}} />
+                <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', fontSize: '10px'}} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* 🖥️ STAGE 3: NEURAL SYSTEM LOGS (NEW ADDON) */}
+      {/* 🖥️ STAGE 3: NEURAL SYSTEM LOGS */}
       <div className="bg-black/40 border border-white/10 rounded-[2rem] p-6 font-mono text-[11px] shadow-inner">
         <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
           <Terminal size={14} className="text-sky-500" />
