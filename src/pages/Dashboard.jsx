@@ -1,244 +1,119 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { 
-  BrainCircuit, Zap, AlertTriangle, ArrowUpRight, BarChart3, 
-  PieChart as PieIcon, TrendingUp, Activity, Cpu, Leaf, 
-  Target, ShieldCheck, Sparkles, Terminal, PlayCircle
-} from 'lucide-react';
-import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
-import InventoryCard from '../components/InventoryCard';
-
-// 🔌 NEURAL IMPORTS
-import { getFridayForecast, wakeUpFriday } from '../lib/aiService'; 
-import { executeAutoProduction } from '../lib/productionEngine';
+import { executeAutoProduction, getFridayPrediction } from '../lib/productionEngine';
+import * as XLSX from 'xlsx'; // Important: Run 'npm install xlsx'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Zap, BrainCircuit, Upload, Play, AlertTriangle, Terminal } from 'lucide-react';
 
 const Dashboard = () => {
-  const [components, setComponents] = useState([]);
-  const [criticalItems, setCriticalItems] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const [recipeName, setRecipeName] = useState("MASTER-DEMO");
+  const [logs, setLogs] = useState([{ time: "00:00", msg: "Friday System Online.", type: "sys" }]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [aiPrediction, setAiPrediction] = useState(null);
-  const [fridayInsight, setFridayInsight] = useState("");
-  const [qualityStats, setQualityStats] = useState({ yield: 98.2, co2: -12, grade: 'A+' });
-  
-  const [logs, setLogs] = useState([
-    { id: 1, time: new Date().toLocaleTimeString(), msg: "Friday System Online. Neural Link standing by.", type: "system" }
-  ]);
 
   const addLog = (msg, type = "info") => {
-    setLogs(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString(), msg, type }, ...prev].slice(0, 6));
+    setLogs(prev => [{ time: new Date().toLocaleTimeString(), msg, type }, ...prev].slice(0, 5));
   };
 
-  const fetchDashboardData = async () => {
-    const { data } = await supabase.from('inventory').select('*');
-    const allItems = data || [];
-    setComponents(allItems);
-    // Critical is defined as less than or equal to 20% of min_required
-    const critical = allItems.filter(item => item.current_stock <= (item.min_required * 0.2));
-    setCriticalItems(critical);
+  const fetchData = async () => {
+    const { data } = await supabase.from('inventory').select('*').order('current_stock', { ascending: true });
+    setInventory(data || []);
   };
 
-  useEffect(() => {
-    fetchDashboardData();
-    wakeUpFriday(); 
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  // 🎤 FRIDAY VOICE ENGINE
-  const speak = (text) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.pitch = 0.9;
-    utterance.rate = 1.1;
-    window.speechSynthesis.speak(utterance);
-  };
+  // 📁 DYNAMIC SCRAPER: Reads ANY Excel file and creates the DB rows
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    addLog(`Scraping file: ${file.name}...`, "process");
 
-  // 🌪️ THE GHOST ENGINE SIMULATOR (Deducts stock for demo)
-  const simulateProduction = async () => {
-    if (components.length === 0) return;
-    addLog("Ghost Engine: Simulating 24h Production Cycle...", "process");
-    
-    // For demo: Deducts a random amount (5-15) from all items
-    const { error } = await supabase.rpc('simulate_daily_usage'); // Assumes you ran the SQL function I gave you
+    reader.onload = async (evt) => {
+      const bstr = evt.target.result;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-    if (!error) {
-      await fetchDashboardData();
-      addLog("Cycle Complete. Inventory levels adjusted.", "success");
-      speak("Production cycle complete. Stock levels have been adjusted, Boss.");
-    } else {
-      // Fallback: Just update one item if the RPC isn't set up
-      await supabase.from('inventory').update({ current_stock: components[0].current_stock - 10 }).eq('id', components[0].id);
-      await fetchDashboardData();
-      addLog("Local Simulation Complete.", "success");
-    }
-  };
+      for (let row of data) {
+        const part = row['Component'] || row['Item'] || row['Part'];
+        const qty = row['Qty'] || row['Quantity'] || 1;
 
- const handleNeuralSync = async () => {
-    if (components.length === 0) {
-        addLog("Error: No inventory found. Please upload a file first.", "error");
-        return;
-    }
-    
-    setIsSyncing(true);
-    addLog("Friday: Syncing with AI Forecaster...", "process");
-
-    try {
-      // 1. Get AI Prediction (Simulated for Demo)
-      const forecast = Math.floor(Math.random() * 20) + 5; 
-      setAiPrediction(forecast);
-      
-      const insight = `Neural Analysis complete. I predict a demand of ${forecast} units. Syncing stock levels now...`;
-      setFridayInsight(insight);
-      speak(insight);
-
-      // 2. THE DYNAMIC PRODUCTION CALL
-      // This will use 'BAJAJ-V4' or whatever recipe you created from the file
-      const result = await executeAutoProduction('BAJAJ-V4', forecast);
-
-      if (result.success) {
-        addLog(`Successfully processed ${forecast} units. Stock levels dropped.`, "success");
-        await fetchDashboardData(); // Refresh the Matrix and Graph!
-      } else {
-        addLog(`Friday: ${result.message}`, "error");
+        if (part) {
+          // 1. Upsert Inventory
+          const { data: invItem } = await supabase.from('inventory')
+            .upsert({ name: part, current_stock: 1000, threshold: 200 }, { onConflict: 'name' }).select().single();
+          
+          // 2. Save Recipe
+          await supabase.from('recipes').upsert({ recipe_name: file.name, component_id: invItem.id, quantity_required: qty });
+        }
       }
-    } catch (error) {
-      addLog("Neural Link Interrupted.", "error");
-    } finally {
-      setIsSyncing(false);
-    }
+      setRecipeName(file.name);
+      addLog(`Success! Recipe "${file.name}" is now live.`, "success");
+      fetchData();
+    };
+    reader.readAsBinaryString(file);
   };
 
-  const consumptionData = components.slice(0, 6).map(c => ({ 
-    name: c.name.split(' ')[0], 
-    value: c.current_stock 
-  }));
-  
-  const stockStats = [
-    { name: 'Critical', value: criticalItems.length, color: '#ef4444' },
-    { name: 'Optimal', value: components.length - criticalItems.length, color: '#0ea5e9' },
-  ];
+  const runNeuralProduction = async () => {
+    setIsSyncing(true);
+    const { forecast, insight } = await getFridayPrediction();
+    addLog(`AI Prediction: ${insight}`, "ai");
+
+    const result = await executeAutoProduction(recipeName, forecast);
+    if (result.success) {
+      addLog(result.message, "success");
+      fetchData();
+    } else {
+      addLog(result.message, "error");
+    }
+    setIsSyncing(false);
+  };
 
   return (
-    <div className="relative min-h-full space-y-10 animate-in fade-in duration-1000 pb-20 p-6 lg:p-10">
-      
-      {/* 🌌 AMBIENT BACKGROUND */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-sky-500/5 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 rounded-full blur-[120px]"></div>
-      </div>
-
-      {/* 🚀 STAGE 1: AI COMMAND CENTER */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 relative overflow-hidden bg-gradient-to-br from-slate-900 to-black border border-sky-500/30 rounded-[3rem] p-10 flex items-center justify-between group shadow-2xl">
-           <Zap className="absolute -right-10 -bottom-10 text-sky-500/5 rotate-12 group-hover:rotate-45 transition-transform duration-1000" size={300} />
-           <div className="relative z-10 flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <BrainCircuit className="text-sky-400" size={32} />
-                <span className="bg-sky-500 text-white text-[9px] font-black px-4 py-1 rounded-full tracking-widest animate-pulse uppercase">Neural Link Active</span>
-              </div>
-              <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-tight">
-                Friday <span className="text-sky-500 text-glow">Intelligence</span>
-              </h2>
-              
-              <div className="mt-6 min-h-[60px] border-l-2 border-sky-500/50 pl-6">
-                <p className="text-slate-300 text-lg font-medium italic leading-relaxed">
-                  {fridayInsight ? `🤖 "${fridayInsight}"` : `"Awaiting Neural Sync... Simulation mode ready."`}
-                </p>
-              </div>
-           </div>
-           
-           <div className="flex flex-col gap-3 relative z-10 ml-8">
-             <button 
-               onClick={handleNeuralSync} 
-               disabled={isSyncing}
-               className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-2xl ${
-                 isSyncing ? 'bg-slate-800 text-slate-500' : 'bg-sky-500 text-white hover:bg-white hover:text-black hover:scale-105 active:scale-95'
-               }`}
-             >
-                {isSyncing ? 'Syncing...' : 'Sync AI'}
-             </button>
-
-             <button 
-               onClick={simulateProduction}
-               className="px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] bg-slate-800 text-sky-400 border border-sky-500/30 hover:bg-sky-900 hover:text-white transition-all flex items-center gap-2"
-             >
-                <PlayCircle size={14}/> Run Production
-             </button>
-           </div>
+    <div className="p-8 space-y-8 bg-[#01060f] text-white min-h-screen">
+      {/* HEADER SECTION */}
+      <div className="flex justify-between items-center bg-gradient-to-r from-slate-900 to-black p-8 rounded-[2rem] border border-sky-500/20">
+        <div>
+          <h1 className="text-4xl font-black uppercase tracking-tighter">Friday <span className="text-sky-500">Neural Sync</span></h1>
+          <p className="text-slate-400 mt-2">Current Active Recipe: <span className="text-sky-400 font-mono">{recipeName}</span></p>
         </div>
-
-        <div className="bg-white/5 border border-white/10 rounded-[3rem] p-10 flex flex-col justify-center backdrop-blur-xl">
-          <p className="text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase mb-2">Confidence Score</p>
-          <p className="text-6xl font-black text-white tracking-tighter">87.4<span className="text-sky-500">%</span></p>
-          <div className="h-1.5 w-full bg-white/10 rounded-full mt-6 overflow-hidden">
-            <div className="h-full bg-sky-500 w-[87%] shadow-[0_0_15px_#0ea5e9]" />
-          </div>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 bg-slate-800 px-6 py-3 rounded-xl cursor-pointer hover:bg-slate-700 transition-all">
+            <Upload size={18} /> Upload BOM
+            <input type="file" hidden onChange={handleFileUpload} />
+          </label>
+          <button onClick={runNeuralProduction} disabled={isSyncing} className="bg-sky-500 px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all">
+            <Zap size={18} /> {isSyncing ? "Syncing..." : "Sync AI & Build"}
+          </button>
         </div>
       </div>
 
-      {/* 📊 STAGE 2: ANALYTICS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={consumptionData}>
-                <XAxis dataKey="name" hide />
-                <Tooltip contentStyle={{backgroundColor: '#020617', border: 'none', borderRadius: '16px'}} />
-                <Bar dataKey="value" fill="#0ea5e9" radius={[10, 10, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={stockStats} innerRadius={70} outerRadius={90} paddingAngle={8} dataKey="value">
-                  {stockStats.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {/* GRAPH SECTION */}
+      <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] h-[350px]">
+        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] mb-6 text-slate-500">Inventory Stock Levels (Live)</h3>
+        <ResponsiveContainer width="100%" height="90%">
+          <BarChart data={inventory.slice(0, 10)}>
+            <XAxis dataKey="name" hide />
+            <Tooltip contentStyle={{backgroundColor: '#020617', border: 'none', borderRadius: '12px'}} />
+            <Bar dataKey="current_stock">
+              {inventory.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.current_stock < entry.threshold ? '#ef4444' : '#0ea5e9'} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
-      {/* 🖥️ STAGE 3: LOGS */}
-      <div className="bg-black/40 border border-white/10 rounded-[2rem] p-6 font-mono text-[11px]">
-        <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
-          <Terminal size={14} className="text-sky-500" />
-          <span className="text-slate-500 uppercase tracking-widest font-black">Friday Neural Terminal</span>
+      {/* TERMINAL LOGS */}
+      <div className="bg-black border border-white/10 p-6 rounded-3xl font-mono text-xs">
+        <div className="flex items-center gap-2 text-sky-500 mb-4 font-black uppercase tracking-widest">
+          <Terminal size={14} /> Friday System Log
         </div>
-        <div className="space-y-2">
-          {logs.map(log => (
-            <div key={log.id} className="flex gap-4">
-              <span className="text-sky-500/50">[{log.time}]</span>
-              <span className={log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-emerald-400' : 'text-slate-300'}>
-                {log.msg}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 🚨 STAGE 5: CRITICAL RADAR */}
-      {criticalItems.length > 0 && (
-        <div className="space-y-6">
-          <div className="flex items-center gap-4 text-red-500">
-            <AlertTriangle size={20} className="animate-bounce" />
-            <h2 className="text-[11px] font-black uppercase tracking-[0.4em]">Critical Procurement Radar</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {criticalItems.map(item => (
-              <div key={item.id} className="bg-red-500/10 border border-red-500/20 rounded-3xl p-6 border-l-8 border-l-red-500">
-                <p className="text-white font-black uppercase">{item.name}</p>
-                <p className="text-[10px] text-red-400 font-bold mt-2">Stock: {item.current_stock} / {item.min_required}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 📦 STAGE 6: MATRIX */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        {components.slice(0, 12).map(comp => <InventoryCard key={comp.id} item={comp} />)}
+        {logs.map((log, i) => (
+          <p key={i} className="mb-1">
+            <span className="opacity-40">[{log.time}]</span> 
+            <span className={log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-emerald-400' : 'text-slate-300'}> {log.msg}</span>
+          </p>
+        ))}
       </div>
     </div>
   );
