@@ -1,41 +1,42 @@
 import { supabase } from './supabaseClient';
 
-/**
- * PANDORA GHOST ENGINE
- * This function deducts the required components from inventory 
- * based on a "Recipe" (BOM) when the AI authorizes a run.
- */
 export const executeAutoProduction = async (recipeId, quantity) => {
   try {
-    // 1. Get the Recipe (What components are needed?)
-    // In a hackathon, we can mock this or fetch from a 'recipes' table
+    // 1. Fetch the Recipe (BOM)
     const { data: recipe, error: recipeError } = await supabase
       .from('recipes')
-      .select('*')
+      .select('*, inventory(id, name, current_stock, threshold)')
       .eq('recipe_id', recipeId);
 
-    if (recipeError || !recipe) throw new Error("Recipe Not Found");
+    if (recipeError || !recipe || recipe.length === 0) throw new Error("Recipe Not Found");
 
-    // 2. Loop through components and subtract from inventory
-    for (const requirement of recipe) {
-      const { data: item } = await supabase
-        .from('inventory')
-        .select('current_stock')
-        .eq('id', requirement.component_id)
-        .single();
-
-      const newStock = item.current_stock - (requirement.amount_per_unit * quantity);
-
-      await supabase
-        .from('inventory')
-        .update({ current_stock: newStock })
-        .eq('id', requirement.component_id);
+    // 2. Pre-Check: Do we have enough stock?
+    for (const req of recipe) {
+      if (req.inventory.current_stock < (req.amount_per_unit * quantity)) {
+        throw new Error(`Insufficient stock for ${req.inventory.name}`);
+      }
     }
 
-    // 3. Log the successful run
-    return { success: true, message: `Produced ${quantity} units of ${recipeId}` };
+    // 3. Deduction Loop
+    const updates = recipe.map(req => {
+      const newStock = req.inventory.current_stock - (req.amount_per_unit * quantity);
+      return supabase
+        .from('inventory')
+        .update({ current_stock: newStock })
+        .eq('id', req.component_id);
+    });
+
+    await Promise.all(updates);
+
+    // 4. Log to Production History (for Graphs)
+    await supabase.from('production_history').insert({
+      recipe_id: recipeId,
+      units_produced: quantity,
+      timestamp: new Date().toISOString()
+    });
+
+    return { success: true, message: `Neural Sync: ${quantity} units of ${recipeId} processed.` };
   } catch (err) {
-    console.error("Production Error:", err.message);
     return { success: false, error: err.message };
   }
 };
