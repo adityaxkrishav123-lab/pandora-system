@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { 
-  BrainCircuit, Package, Zap, AlertTriangle, 
-  ArrowUpRight, BarChart3, PieChart as PieIcon, 
-  TrendingUp, Activity, Cpu, Leaf, Target, ShieldCheck, Sparkles
+  BrainCircuit, Zap, AlertTriangle, ArrowUpRight, BarChart3, 
+  PieChart as PieIcon, TrendingUp, Activity, Cpu, Leaf, 
+  Target, ShieldCheck, Sparkles, Terminal
 } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import InventoryCard from '../components/InventoryCard';
@@ -19,14 +19,22 @@ const Dashboard = () => {
   // 🧠 AI & ENGINE STATES
   const [isSyncing, setIsSyncing] = useState(false);
   const [aiPrediction, setAiPrediction] = useState(null);
-  const [fridayInsight, setFridayInsight] = useState(""); // 👈 Friday's Llama-3 Voice
+  const [fridayInsight, setFridayInsight] = useState("");
   const [qualityStats, setQualityStats] = useState({ yield: 98.2, co2: -12, grade: 'A+' });
+  
+  // 📝 NEURAL LOGS STATE
+  const [logs, setLogs] = useState([
+    { id: 1, time: new Date().toLocaleTimeString(), msg: "Friday System Online. Neural Link standing by.", type: "system" }
+  ]);
+
+  const addLog = (msg, type = "info") => {
+    setLogs(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString(), msg, type }, ...prev].slice(0, 6));
+  };
 
   const fetchDashboardData = async () => {
     const { data } = await supabase.from('inventory').select('*');
     const allItems = data || [];
     setComponents(allItems);
-    // Critical if stock is below 20% of minimum required
     const critical = allItems.filter(item => item.current_stock <= (item.min_required * 0.2));
     setCriticalItems(critical);
   };
@@ -35,36 +43,39 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // ⚡ THE MASTER SYNC HANDLER (V2.1)
+  // ⚡ THE MASTER SYNC HANDLER (V3.0 - FINAL)
   const handleNeuralSync = async () => {
     if (components.length === 0) return;
     setIsSyncing(true);
+    addLog("Initiating Neural Handshake with Render...", "process");
 
     try {
-      // 1. Trigger the Unified Python Brain
       const firstItem = components[0]; 
       const aiData = await getFridayForecast(firstItem);
 
       if (aiData) {
-        setAiPrediction(aiData.forecast);
-        setFridayInsight(aiData.friday_advice); // Store Llama-3's tactical advice
+        setAiPrediction(aiData.forecasted_demand);
+        setFridayInsight(aiData.friday_advice);
+        addLog(`Friday: ${aiData.friday_advice.substring(0, 60)}...`, "ai");
         
-        // 2. Trigger Production Engine (Ghost Engine in Supabase)
-        // We calculate production based on the forecast Friday just gave
+        // Trigger Ghost Engine (Automatic stock deduction)
+        addLog("Ghost Engine: Executing Production Run...", "process");
         const prodResult = await executeAutoProduction('BAJAJ-V4', 5); 
         
         if (prodResult.success) {
+          addLog("Success: Inventory levels synchronized.", "success");
           setQualityStats({
             yield: (95 + Math.random() * 4).toFixed(1),
             co2: -(10 + Math.random() * 5).toFixed(0),
             grade: 'A+'
           });
           await fetchDashboardData();
+        } else {
+          addLog(`Engine Alert: ${prodResult.error || "Stock Check Failed"}`, "error");
         }
-      } else {
-        alert("🤖 Friday: Neural Link unstable. Check if your Python server is running on port 8000.");
       }
     } catch (error) {
+      addLog("Neural Link Interrupted. Check Backend.", "error");
       console.error("Neural Sync Error:", error);
     } finally {
       setIsSyncing(false);
@@ -103,12 +114,9 @@ const Dashboard = () => {
                 Friday <span className="text-sky-500 text-glow">Intelligence</span>
               </h2>
               
-              {/* ✨ FRIDAY'S DYNAMIC VOICE (LLAMA-3) */}
               <div className="mt-6 min-h-[60px] border-l-2 border-sky-500/50 pl-6">
                 <p className="text-slate-300 text-lg font-medium italic leading-relaxed">
-                  {fridayInsight 
-                    ? `🤖 "${fridayInsight}"` 
-                    : `"Analyzing patterns... Standing by for demand_forecaster.pkl synchronization."`}
+                  {fridayInsight ? `🤖 "${fridayInsight}"` : `"Awaiting Neural Sync... Analysis ready for current cycle."`}
                 </p>
                 {aiPrediction && (
                     <div className="flex items-center gap-2 mt-2 text-sky-400 font-bold text-sm">
@@ -143,26 +151,26 @@ const Dashboard = () => {
 
       {/* 📊 STAGE 2: ANALYTICS & VISUALS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl transition-all hover:border-white/20">
+        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
           <div className="flex items-center gap-3 mb-6">
             <BarChart3 className="text-sky-500" size={18} />
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Stock Distribution</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock Distribution</h3>
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={consumptionData}>
                 <XAxis dataKey="name" hide />
-                <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', fontSize: '10px'}} />
+                <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#020617', border: 'none', borderRadius: '16px', fontSize: '10px'}} />
                 <Bar dataKey="value" fill="#0ea5e9" radius={[10, 10, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl transition-all hover:border-white/20">
+        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
           <div className="flex items-center gap-3 mb-6">
             <PieIcon className="text-sky-500" size={18} />
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Health Radar</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Health</h3>
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -170,41 +178,62 @@ const Dashboard = () => {
                 <Pie data={stockStats} innerRadius={70} outerRadius={90} paddingAngle={8} dataKey="value">
                   {stockStats.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                 </Pie>
-                <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', fontSize: '10px'}} />
+                <Tooltip contentStyle={{backgroundColor: '#020617', border: 'none', borderRadius: '16px'}} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* ♻️ STAGE 3: SUSTAINABILITY & QUALITY */}
+      {/* 🖥️ STAGE 3: NEURAL SYSTEM LOGS (NEW ADDON) */}
+      <div className="bg-black/40 border border-white/10 rounded-[2rem] p-6 font-mono text-[11px] shadow-inner">
+        <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
+          <Terminal size={14} className="text-sky-500" />
+          <span className="text-slate-500 uppercase tracking-widest font-black">Friday Neural Terminal</span>
+        </div>
+        <div className="space-y-2">
+          {logs.map(log => (
+            <div key={log.id} className="flex gap-4 animate-in slide-in-from-left duration-300">
+              <span className="text-sky-500/50">[{log.time}]</span>
+              <span className={
+                log.type === 'error' ? 'text-red-400' : 
+                log.type === 'success' ? 'text-emerald-400' : 
+                log.type === 'ai' ? 'text-purple-400 font-bold' : 
+                log.type === 'process' ? 'text-sky-400 italic' : 'text-slate-300'
+              }>
+                {log.msg}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ♻️ STAGE 4: SUSTAINABILITY & QUALITY */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-3xl p-8 flex flex-col justify-between group hover:bg-emerald-500/10 transition-all">
+        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-3xl p-8 flex flex-col justify-between hover:bg-emerald-500/10 transition-all">
           <Leaf className="text-emerald-500 mb-4" size={24} />
           <div>
-            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Sustainability Grade</p>
+            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Sustainability</p>
             <p className="text-4xl font-black text-white mt-1">{qualityStats.grade}</p>
           </div>
         </div>
-        
-        <div className="bg-orange-500/5 border border-orange-500/20 rounded-3xl p-8 flex flex-col justify-between group hover:bg-orange-500/10 transition-all">
+        <div className="bg-orange-500/5 border border-orange-500/20 rounded-3xl p-8 flex flex-col justify-between hover:bg-orange-500/10 transition-all">
           <Target className="text-orange-500 mb-4" size={24} />
           <div>
-            <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Production Yield</p>
-            <p className="text-4xl font-black text-white mt-1">{qualityStats.yield}<span className="text-orange-500">%</span></p>
+            <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Yield Accuracy</p>
+            <p className="text-4xl font-black text-white mt-1">{qualityStats.yield}%</p>
           </div>
         </div>
-
-        <div className="bg-purple-500/5 border border-purple-500/20 rounded-3xl p-8 flex flex-col justify-between group hover:bg-purple-500/10 transition-all">
+        <div className="bg-purple-500/5 border border-purple-500/20 rounded-3xl p-8 flex flex-col justify-between hover:bg-purple-500/10 transition-all">
           <ShieldCheck className="text-purple-500 mb-4" size={24} />
           <div>
             <p className="text-[10px] font-black text-purple-500 uppercase tracking-widest">Risk Mitigation</p>
-            <p className="text-4xl font-black text-white mt-1">{qualityStats.co2}<span className="text-purple-500">%</span></p>
+            <p className="text-4xl font-black text-white mt-1">{qualityStats.co2}%</p>
           </div>
         </div>
       </div>
 
-      {/* 🚨 STAGE 4: CRITICAL PROCUREMENT RADAR */}
+      {/* 🚨 STAGE 5: CRITICAL RADAR */}
       {criticalItems.length > 0 && (
         <div className="space-y-6">
           <div className="flex items-center gap-4 text-red-500">
@@ -214,7 +243,7 @@ const Dashboard = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {criticalItems.map(item => (
-              <div key={item.id} className="bg-red-500/5 border border-red-500/20 rounded-[2rem] p-8 flex justify-between items-center group border-l-8 border-l-red-500 hover:bg-red-500/10 transition-all">
+              <div key={item.id} className="bg-red-500/5 border border-red-500/20 rounded-[2rem] p-8 flex justify-between items-center group border-l-8 border-l-red-500">
                 <div>
                   <p className="text-white font-black uppercase text-base tracking-tight">{item.name}</p>
                   <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
@@ -230,15 +259,15 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* 📦 STAGE 5: GLOBAL COMPONENT MATRIX */}
+      {/* 📦 STAGE 6: GLOBAL MATRIX */}
       <div className="space-y-6">
         <div className="flex items-center gap-4 text-slate-500">
           <Cpu size={18} />
-          <h2 className="text-[11px] font-black uppercase tracking-[0.4em]">Global Matrix</h2>
+          <h2 className="text-[11px] font-black uppercase tracking-[0.4em]">Global Component Matrix</h2>
           <div className="flex-1 h-[1px] bg-white/5"></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {components.slice(0, 8).map(comp => <InventoryCard key={comp.id} item={comp} />)}
+          {components.slice(0, 12).map(comp => <InventoryCard key={comp.id} item={comp} />)}
         </div>
       </div>
     </div>
