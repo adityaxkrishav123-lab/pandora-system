@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/pandora-system/static/css/main.05019379.css",
-    "main.js": "/pandora-system/static/js/main.56e5c3d9.js",
+    "main.js": "/pandora-system/static/js/main.8194abb9.js",
     "index.html": "/pandora-system/index.html",
     "main.05019379.css.map": "/pandora-system/static/css/main.05019379.css.map",
-    "main.56e5c3d9.js.map": "/pandora-system/static/js/main.56e5c3d9.js.map"
+    "main.8194abb9.js.map": "/pandora-system/static/js/main.8194abb9.js.map"
   },
   "entrypoints": [
     "static/css/main.05019379.css",
-    "static/js/main.56e5c3d9.js"
+    "static/js/main.8194abb9.js"
   ]
 }
