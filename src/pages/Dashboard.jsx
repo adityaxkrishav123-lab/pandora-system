@@ -139,5 +139,33 @@ const Dashboard = () => {
     </div>
   );
 };
-
+{/* 🚨 AUTO-BUY RADAR (The Final Demo "Wow" Factor) */}
+      {procurementList.length > 0 && (
+        <div className="bg-red-500/5 border-2 border-dashed border-red-500/30 rounded-[2.5rem] p-8 animate-pulse">
+          <div className="flex items-center gap-4 mb-6">
+            <AlertTriangle className="text-red-500" size={32} />
+            <div>
+              <h2 className="text-2xl font-black uppercase text-white">Friday <span className="text-red-500 text-glow">Auto-Buy</span> Protocol</h2>
+              <p className="text-slate-400 text-xs font-mono">Shortage detected. Friday has prepared the following procurement orders.</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {procurementList.map((order, idx) => (
+              <div key={idx} className="bg-black/60 border border-white/10 p-6 rounded-3xl flex flex-col justify-between">
+                <div>
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{order.name}</p>
+                  <p className="text-2xl font-black text-white mt-1">Order: {order.orderQty} <span className="text-xs text-slate-400">pcs</span></p>
+                </div>
+                <button 
+                  onClick={() => approveOrder(order.name)}
+                  className="mt-6 w-full py-3 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/50 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                >
+                  Confirm Neural Order
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 export default Dashboard;
