@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { 
   BrainCircuit, Package, Zap, AlertTriangle, 
   ArrowUpRight, BarChart3, PieChart as PieIcon, 
-  TrendingUp, Activity, Cpu, Leaf, Target, ShieldCheck
+  TrendingUp, Activity, Cpu, Leaf, Target, ShieldCheck, Sparkles
 } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 import InventoryCard from '../components/InventoryCard';
@@ -19,6 +19,7 @@ const Dashboard = () => {
   // 🧠 AI & ENGINE STATES
   const [isSyncing, setIsSyncing] = useState(false);
   const [aiPrediction, setAiPrediction] = useState(null);
+  const [fridayInsight, setFridayInsight] = useState(""); // 👈 Friday's Llama-3 Voice
   const [qualityStats, setQualityStats] = useState({ yield: 98.2, co2: -12, grade: 'A+' });
 
   const fetchDashboardData = async () => {
@@ -34,36 +35,34 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // ⚡ THE MASTER SYNC HANDLER
+  // ⚡ THE MASTER SYNC HANDLER (V2.1)
   const handleNeuralSync = async () => {
     if (components.length === 0) return;
-    
     setIsSyncing(true);
 
     try {
-      // 1. Trigger Python AI Model (.pkl)
+      // 1. Trigger the Unified Python Brain
       const firstItem = components[0]; 
       const aiData = await getFridayForecast(firstItem);
 
-      if (aiData && aiData.forecasted_demand > 0) {
-        setAiPrediction(aiData.forecasted_demand);
+      if (aiData) {
+        setAiPrediction(aiData.forecast);
+        setFridayInsight(aiData.friday_advice); // Store Llama-3's tactical advice
         
-        // 2. Trigger Production Engine (Supabase Deduction)
+        // 2. Trigger Production Engine (Ghost Engine in Supabase)
+        // We calculate production based on the forecast Friday just gave
         const prodResult = await executeAutoProduction('BAJAJ-V4', 5); 
         
         if (prodResult.success) {
-          // 3. Update Quality/Sustainability Metrics randomly for the demo
           setQualityStats({
             yield: (95 + Math.random() * 4).toFixed(1),
             co2: -(10 + Math.random() * 5).toFixed(0),
             grade: 'A+'
           });
-
-          alert(`🤖 Friday: Neural Sync Complete.\nDemand: ${aiData.forecasted_demand}\nStatus: Inventory Adjusted.`);
           await fetchDashboardData();
         }
       } else {
-        alert("🤖 Friday: Neural Link unstable. Is the Python server running on port 5000?");
+        alert("🤖 Friday: Neural Link unstable. Check if your Python server is running on port 8000.");
       }
     } catch (error) {
       console.error("Neural Sync Error:", error);
@@ -93,42 +92,51 @@ const Dashboard = () => {
 
       {/* 🚀 STAGE 1: AI COMMAND CENTER */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 relative overflow-hidden bg-gradient-to-br from-sky-500/20 to-purple-600/10 border border-sky-500/30 rounded-[3rem] p-10 flex items-center justify-between group">
-           <Zap className="absolute -right-10 -bottom-10 text-white/5 rotate-12 group-hover:rotate-45 transition-transform duration-1000" size={300} />
-           <div className="relative z-10">
+        <div className="lg:col-span-2 relative overflow-hidden bg-gradient-to-br from-slate-900 to-black border border-sky-500/30 rounded-[3rem] p-10 flex items-center justify-between group shadow-2xl">
+           <Zap className="absolute -right-10 -bottom-10 text-sky-500/5 rotate-12 group-hover:rotate-45 transition-transform duration-1000" size={300} />
+           <div className="relative z-10 flex-1">
               <div className="flex items-center gap-3 mb-4">
                 <BrainCircuit className="text-sky-400" size={32} />
-                <span className="bg-sky-500 text-white text-[9px] font-black px-4 py-1 rounded-full tracking-widest animate-pulse">LIVE NEURAL ENGINE</span>
+                <span className="bg-sky-500 text-white text-[9px] font-black px-4 py-1 rounded-full tracking-widest animate-pulse uppercase">Neural Link Active</span>
               </div>
               <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-tight">
-                Demand <span className="text-sky-500">Forecaster</span> V2.1
+                Friday <span className="text-sky-500 text-glow">Intelligence</span>
               </h2>
-              <p className="text-slate-300 mt-4 text-lg font-medium max-w-lg italic leading-relaxed">
-                {aiPrediction 
-                  ? `Friday Analysis: Demand spike detected. Prediction: ${aiPrediction} units. Neural Link Optimal.`
-                  : `"Waiting for sync... Analyzing demand_forecaster.pkl patterns for the next 12-day window."`}
-              </p>
+              
+              {/* ✨ FRIDAY'S DYNAMIC VOICE (LLAMA-3) */}
+              <div className="mt-6 min-h-[60px] border-l-2 border-sky-500/50 pl-6">
+                <p className="text-slate-300 text-lg font-medium italic leading-relaxed">
+                  {fridayInsight 
+                    ? `🤖 "${fridayInsight}"` 
+                    : `"Analyzing patterns... Standing by for demand_forecaster.pkl synchronization."`}
+                </p>
+                {aiPrediction && (
+                    <div className="flex items-center gap-2 mt-2 text-sky-400 font-bold text-sm">
+                        <Sparkles size={16}/> Forecast: {aiPrediction} Units Required
+                    </div>
+                )}
+              </div>
            </div>
            
            <button 
              onClick={handleNeuralSync} 
              disabled={isSyncing}
-             className={`relative z-10 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-2xl ${
-               isSyncing ? 'bg-slate-700 text-slate-400 cursor-wait' : 'bg-white text-black hover:bg-sky-500 hover:text-white hover:scale-105 active:scale-95'
+             className={`relative z-10 ml-8 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-2xl ${
+               isSyncing ? 'bg-slate-800 text-slate-500 cursor-wait' : 'bg-sky-500 text-white hover:bg-white hover:text-black hover:scale-105 active:scale-95'
              }`}
            >
-              {isSyncing ? 'Neural Processing...' : 'Sync Model'}
+              {isSyncing ? 'Processing...' : 'Sync Friday'}
            </button>
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-[3rem] p-10 flex flex-col justify-center backdrop-blur-xl">
-          <p className="text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase mb-2">Model Confidence</p>
+          <p className="text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase mb-2">Confidence Score</p>
           <p className="text-6xl font-black text-white tracking-tighter">87.4<span className="text-sky-500">%</span></p>
           <div className="h-1.5 w-full bg-white/10 rounded-full mt-6 overflow-hidden">
             <div className="h-full bg-sky-500 w-[87%] shadow-[0_0_15px_#0ea5e9]" />
           </div>
-          <p className="text-[10px] text-emerald-500 font-bold mt-4 flex items-center gap-2">
-            <TrendingUp size={14}/> SYSTEM STABLE
+          <p className="text-[10px] text-emerald-500 font-bold mt-4 flex items-center gap-2 uppercase tracking-widest">
+            <TrendingUp size={14}/> Engine: Llama-3-8B 
           </p>
         </div>
       </div>
@@ -138,7 +146,7 @@ const Dashboard = () => {
         <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl transition-all hover:border-white/20">
           <div className="flex items-center gap-3 mb-6">
             <BarChart3 className="text-sky-500" size={18} />
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Consumption Dynamics</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Stock Distribution</h3>
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -154,7 +162,7 @@ const Dashboard = () => {
         <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl transition-all hover:border-white/20">
           <div className="flex items-center gap-3 mb-6">
             <PieIcon className="text-sky-500" size={18} />
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Health Distribution</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Health Radar</h3>
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -169,7 +177,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ♻️ STAGE 3: SUSTAINABILITY & QUALITY ADDON */}
+      {/* ♻️ STAGE 3: SUSTAINABILITY & QUALITY */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-3xl p-8 flex flex-col justify-between group hover:bg-emerald-500/10 transition-all">
           <Leaf className="text-emerald-500 mb-4" size={24} />
@@ -182,7 +190,7 @@ const Dashboard = () => {
         <div className="bg-orange-500/5 border border-orange-500/20 rounded-3xl p-8 flex flex-col justify-between group hover:bg-orange-500/10 transition-all">
           <Target className="text-orange-500 mb-4" size={24} />
           <div>
-            <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Yield Accuracy</p>
+            <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Production Yield</p>
             <p className="text-4xl font-black text-white mt-1">{qualityStats.yield}<span className="text-orange-500">%</span></p>
           </div>
         </div>
@@ -190,7 +198,7 @@ const Dashboard = () => {
         <div className="bg-purple-500/5 border border-purple-500/20 rounded-3xl p-8 flex flex-col justify-between group hover:bg-purple-500/10 transition-all">
           <ShieldCheck className="text-purple-500 mb-4" size={24} />
           <div>
-            <p className="text-[10px] font-black text-purple-500 uppercase tracking-widest">CO2 Mitigation</p>
+            <p className="text-[10px] font-black text-purple-500 uppercase tracking-widest">Risk Mitigation</p>
             <p className="text-4xl font-black text-white mt-1">{qualityStats.co2}<span className="text-purple-500">%</span></p>
           </div>
         </div>
