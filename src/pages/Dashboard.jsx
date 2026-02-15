@@ -71,7 +71,7 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* URGENT PROCUREMENT RADAR (Requirement #5) */}
+      {/* URGENT PROCUREMENT RADAR */}
       {criticalItems.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-4 text-red-500">
@@ -112,9 +112,6 @@ const Dashboard = () => {
       </div>
     </div>
   );
-};
-
-export default Dashboard;
 };
 
 export default Dashboard;
