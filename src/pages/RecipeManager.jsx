@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Plus, Trash2, Save, Cpu } from 'lucide-react';
+import { Plus, Save, Cpu, Layers, Trash2 } from 'lucide-react';
 
 const RecipeManager = () => {
   const [inventory, setInventory] = useState([]);
   const [pcbName, setPcbName] = useState('');
-  const [selectedComponents, setSelectedComponents] = useState([]); // [{id, qty}]
+  const [selectedComponents, setSelectedComponents] = useState([]);
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -19,6 +19,11 @@ const RecipeManager = () => {
     setSelectedComponents([...selectedComponents, { component_id: '', quantity: 1 }]);
   };
 
+  const removeRow = (index) => {
+    const updated = selectedComponents.filter((_, i) => i !== index);
+    setSelectedComponents(updated);
+  };
+
   const updateRow = (index, field, value) => {
     const updated = [...selectedComponents];
     updated[index][field] = value;
@@ -26,18 +31,16 @@ const RecipeManager = () => {
   };
 
   const saveRecipe = async () => {
-    if (!pcbName || selectedComponents.length === 0) return alert("Fill all fields!");
+    if (!pcbName || selectedComponents.length === 0) return alert("Neural Error: Fill all fields!");
 
-    // 1. Create the PCB Type
     const { data: pcb, error: pcbErr } = await supabase
       .from('pcb_types')
       .insert([{ pcb_name: pcbName }])
       .select()
       .single();
 
-    if (pcbErr) return alert("Error creating PCB: " + pcbErr.message);
+    if (pcbErr) return alert("Sync Error: " + pcbErr.message);
 
-    // 2. Link the components in the Recipe table
     const recipeData = selectedComponents.map(item => ({
       pcb_id: pcb.id,
       component_id: item.component_id,
@@ -46,65 +49,93 @@ const RecipeManager = () => {
 
     const { error: recErr } = await supabase.from('pcb_recipes').insert(recipeData);
 
-    if (recErr) alert("Error saving recipe: " + recErr.message);
+    if (recErr) alert("Encryption Error: " + recErr.message);
     else {
-      alert("🏆 Recipe Saved! Ready for Production.");
+      alert("🏆 Master Recipe Saved to Neural Core!");
       setPcbName('');
       setSelectedComponents([]);
     }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 p-8">
-      <div className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100">
-        <h2 className="text-2xl font-black text-slate-900 mb-8 uppercase flex items-center gap-3">
-          <Cpu className="text-sky-500" /> Define New PCB Recipe
-        </h2>
+    <div className="min-h-screen bg-[#020617] p-4 md:p-8 space-y-8 text-white animate-in fade-in duration-700">
+      {/* Header */}
+      <div className="mb-10">
+        <h1 className="text-4xl font-black tracking-tighter uppercase">Recipe <span className="text-sky-500">Architect</span></h1>
+        <p className="text-slate-500 font-bold text-xs uppercase tracking-[0.3em]">Design Immutable PCB Blueprints</p>
+      </div>
 
-        <div className="space-y-6">
-          <input 
-            type="text" 
-            placeholder="Enter PCB Name (e.g. Bajaj-V3-Controller)"
-            className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-sky-500 outline-none font-bold text-lg"
-            value={pcbName}
-            onChange={(e) => setPcbName(e.target.value)}
-          />
+      <div className="bg-white/5 border border-white/10 rounded-[3rem] p-10 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+        {/* Decorative Glow */}
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-sky-500/10 blur-[100px] rounded-full" />
 
+        <div className="relative z-10 space-y-8">
           <div className="space-y-4">
-            <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Required Components</h4>
-            {selectedComponents.map((item, index) => (
-              <div key={index} className="flex gap-4 animate-in slide-in-from-left-2">
-                <select 
-                  className="flex-1 bg-slate-50 border-none rounded-xl py-3 px-4 outline-none font-medium"
-                  onChange={(e) => updateRow(index, 'component_id', e.target.value)}
-                >
-                  <option value="">Select Part from Inventory...</option>
-                  {inventory.map(inv => (
-                    <option key={inv.id} value={inv.id}>{inv.name} ({inv.part_number})</option>
-                  ))}
-                </select>
-                <input 
-                  type="number" 
-                  placeholder="Qty"
-                  className="w-24 bg-slate-50 border-none rounded-xl py-3 px-4 outline-none font-bold text-center"
-                  onChange={(e) => updateRow(index, 'quantity', e.target.value)}
-                />
-              </div>
-            ))}
+            <label className="text-[10px] font-black text-sky-500 uppercase tracking-[0.2em] ml-2">PCB Identity</label>
+            <div className="relative group">
+              <Cpu className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-sky-500 transition-colors" size={24} />
+              <input 
+                type="text" 
+                placeholder="Enter PCB Model Name (e.g. Bajaj-V4-Pro)"
+                className="w-full bg-white/5 border border-white/10 rounded-[2rem] py-6 pl-16 pr-8 focus:border-sky-500/50 outline-none font-black text-xl text-white placeholder:text-slate-700 transition-all"
+                value={pcbName}
+                onChange={(e) => setPcbName(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="flex gap-4 pt-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between ml-2">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <Layers size={14} className="text-sky-500" /> Component Requirements
+              </h4>
+            </div>
+
+            <div className="space-y-3">
+              {selectedComponents.map((item, index) => (
+                <div key={index} className="flex gap-4 animate-in slide-in-from-left-4 duration-300">
+                  <select 
+                    className="flex-1 bg-white/5 border border-white/10 rounded-2xl py-4 px-6 outline-none font-bold text-sm text-white appearance-none focus:border-sky-500/50"
+                    onChange={(e) => updateRow(index, 'component_id', e.target.value)}
+                    value={item.component_id}
+                  >
+                    <option value="" className="bg-[#0f172a]">Select Component...</option>
+                    {inventory.map(inv => (
+                      <option key={inv.id} value={inv.id} className="bg-[#0f172a]">{inv.name} — {inv.part_number}</option>
+                    ))}
+                  </select>
+                  
+                  <input 
+                    type="number" 
+                    placeholder="Qty"
+                    className="w-28 bg-white/5 border border-white/10 rounded-2xl py-4 px-4 outline-none font-black text-center text-sky-500 focus:border-sky-500/50"
+                    value={item.quantity}
+                    onChange={(e) => updateRow(index, 'quantity', e.target.value)}
+                  />
+
+                  <button 
+                    onClick={() => removeRow(index)}
+                    className="p-4 text-slate-600 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 pt-6">
             <button 
               onClick={addComponentRow}
-              className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2"
+              className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-5 rounded-[1.5rem] transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest"
             >
-              <Plus size={20} /> Add Component
+              <Plus size={18} className="text-sky-500" /> Add Component Row
             </button>
             <button 
               onClick={saveRecipe}
-              className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-sky-100 transition-all flex items-center justify-center gap-2"
+              className="flex-1 bg-sky-500 hover:bg-sky-400 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-sky-500/20 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest"
             >
-              <Save size={20} /> Save Master Recipe
+              <Save size={18} /> Commit Master Recipe
             </button>
           </div>
         </div>
