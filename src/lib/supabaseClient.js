@@ -5,7 +5,6 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // This forces the app to use the live URL for all auth flows
     redirectTo: window.location.origin, 
     autoRefreshToken: true,
     persistSession: true,
