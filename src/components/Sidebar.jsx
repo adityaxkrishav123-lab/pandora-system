@@ -5,11 +5,14 @@ import {
   LayoutDashboard, Box, BarChart3, Zap, 
   Cpu, Activity, Clock, LogOut, Sparkles, Terminal 
 } from 'lucide-react';
+// ADDON: Import production engine
+import { executeAutoProduction } from '../lib/productionEngine';
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [aiOpen, setAiOpen] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20}/>, path: '/' },
@@ -23,6 +26,16 @@ const Sidebar = () => {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (!error) navigate('/auth');
+  };
+
+  // ADDON: Authorize Trigger
+  const handleAuthorize = async () => {
+    setIsRunning(true);
+    // Assumes you have a recipe with this ID or logic to pick one
+    const result = await executeAutoProduction('BAJAJ-V4', 5);
+    alert(result.success ? "Neural Command Executed: Stock Adjusted." : "Error: " + result.error);
+    setIsRunning(false);
+    setAiOpen(false);
   };
 
   return (
@@ -52,7 +65,6 @@ const Sidebar = () => {
           ))}
         </nav>
 
-        {/* FRIDAY AI ASSISTANT TRIGGER */}
         <div className="mt-auto space-y-4">
           <button 
             onClick={() => setAiOpen(true)}
@@ -78,7 +90,6 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* AI TERMINAL PANEL */}
       {aiOpen && (
         <div className="fixed bottom-6 right-6 w-96 bg-[#010614] border border-sky-500/30 rounded-[2rem] shadow-2xl z-50 p-6 animate-in slide-in-from-bottom-5">
           <div className="flex justify-between items-center mb-4">
@@ -90,12 +101,18 @@ const Sidebar = () => {
           </div>
           <div className="bg-black/40 p-4 rounded-xl border border-white/5 mb-4">
             <p className="text-sky-400 text-xs font-medium italic leading-relaxed">
-              "I have processed the <strong>demand_forecaster.pkl</strong> model. Patterns indicate a significant consumption increase for the <strong>Bajaj-v4</strong> assembly line starting in 4 days. Would you like me to prepare the replenishment batches?"
+              "I have processed the <strong>demand_forecaster.pkl</strong> model. Patterns indicate a significant consumption increase for the <strong>Bajaj-v4</strong> line. Ready for auto-production?"
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <button className="py-3 bg-sky-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-sky-400 transition-all">Authorize Run</button>
-            <button className="py-3 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-white">Ignore</button>
+            <button 
+              onClick={handleAuthorize}
+              disabled={isRunning}
+              className="py-3 bg-sky-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-sky-400 transition-all"
+            >
+              {isRunning ? 'Running...' : 'Authorize Run'}
+            </button>
+            <button onClick={() => setAiOpen(false)} className="py-3 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-white">Ignore</button>
           </div>
         </div>
       )}
